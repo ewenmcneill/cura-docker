@@ -1,5 +1,45 @@
-#!/bin/sh
+#! /bin/sh
+# Run Cura within Docker, mounting relevant directories and files to
+# provide some integration with the main desktop.
+#
+# Usage: cura-docker [IMAGE_NAME [EXTRA DOCKER ARGUMENTS...]]
+#
+# Cura stores its settings in ~/.config/cura and ~/.local/share/cura
+#
+# so we mount those into the docker container.
+#
+# For more information, see:
+#
+# https://github.com/Ultimaker/Cura/wiki/Cura-Preferences-and-Settings-Locations
+#
+# Written by Ewen McNeill <ewen@naos.co.nz>, 2019-07-09
+#
+# Based on https://github.com/steveb/cura-docker/, but updated to newer
+# Ubuntu / Cura.
+#---------------------------------------------------------------------------
+#
+DOCKER_CURA="${1:-cura-docker}"
+if [ -n "${1}" ]; then
+  shift
+fi
+#
+# Ensure Cura's settings directories exist so we can mount them into container
+mkdir -p "${HOME}/.config/cura" "${HOME}/.local/share/cura"
+#
+# Build XServer permissions
 XSOCK=/tmp/.X11-unix
 XAUTH=/tmp/.docker.xauth
-xauth nlist :0 | sed -e 's/^..../ffff/' | xauth -f $XAUTH nmerge -
-docker run -ti -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro -v $HOME:$HOME -v $XSOCK:$XSOCK -v $XAUTH:$XAUTH -e XAUTHORITY=$XAUTH -e DISPLAY --user $UID:$GROUPS docker.io/stevebake/cura-docker
+xauth nlist :0 | sed -e 's/^..../ffff/' | xauth -f "${XAUTH}" nmerge -
+#
+# Determine UID and GID, so container runs as current user, to ensure that
+# file permissions in the shared volumes are useful.
+UID=$(id -u)
+GID=$(id -g)
+
+# Launch container
+docker run -ti -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
+               -v "${XSOCK}:${XSOCK}" -v "${XAUTH}:${XAUTH}"             \
+               -e "XAUTHORITY=${XAUTH}" -e DISPLAY -e HOME -e USER       \
+               -v "${HOME}/.config/cura:${HOME}/.config/cura"            \
+               -v "${HOME}/.local/share/cura:${HOME}/.local/share/cura"  \
+               --user "${UID}:${GID}" "$@" "${DOCKER_CURA}"
