@@ -11,12 +11,12 @@ development version of Cura.
 Build the Docker container with something like:
 
 ```sh
-docker build -t disco-cura-4.1 .
+docker build -t focal-cura-4.8 .
 ```
 
 Then use the included `cura-docker` script to run Cura, eg:
 
 ```sh
 #! /bin/sh
-./cura-docker disco-cura-4.1 -v /src/cura/models:/src/cura/models
+./cura-docker focal-cura-4.8 -v /src/cura/models:/src/cura/models
 ```
