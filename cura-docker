@@ -13,6 +13,7 @@
 # https://github.com/Ultimaker/Cura/wiki/Cura-Preferences-and-Settings-Locations
 #
 # Written by Ewen McNeill <ewen@naos.co.nz>, 2019-07-09
+# Updated by Ewen McNeill <ewen@naos.co.nz>, 2021-11-21
 #
 # Based on https://github.com/steveb/cura-docker/, but updated to newer
 # Ubuntu / Cura.
@@ -36,10 +37,17 @@ xauth nlist :0 | sed -e 's/^..../ffff/' | xauth -f "${XAUTH}" nmerge -
 UID=$(id -u)
 GID=$(id -g)
 
+# Include X11 card direct rendering interface, if available
+# (improves 3D rendering)
+if [ -r /dev/dri/card0 ]; then
+  DRI_CARD0="-v /dev/dri/card0:/dev/dri/card0:rw"
+fi
+
 # Launch container
 docker run -ti -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
                -v "${XSOCK}:${XSOCK}" -v "${XAUTH}:${XAUTH}"             \
                -e "XAUTHORITY=${XAUTH}" -e DISPLAY -e HOME -e USER       \
                -v "${HOME}/.config/cura:${HOME}/.config/cura"            \
                -v "${HOME}/.local/share/cura:${HOME}/.local/share/cura"  \
-               --user "${UID}:${GID}" "$@" "${DOCKER_CURA}"
+	       ${DRI_CARD0}                                              \
+	       --rm --user "${UID}:${GID}" "$@" "${DOCKER_CURA}"
